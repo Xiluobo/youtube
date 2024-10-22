@@ -6,11 +6,13 @@
     };
 
     const removeElement = (selector, conditionFn = () => true, logMessage = '') => {
-        const element = document.querySelector(selector);
-        if (element && conditionFn(element)) {
-            element.remove();
-            log(logMessage);
-        }
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+            if (conditionFn(element)) {
+                element.remove();
+                log(logMessage);
+            }
+        });
     };
 
     const observeAndRemove = (selector, conditionFn, logMessage) => {
@@ -41,9 +43,9 @@
     // 移除底部上传按钮
     const removeUploadButton = () => removeElement('ytd-upload-button-renderer', () => true, '上传按钮已删除');
     observeAndRemove('ytd-upload-button-renderer', () => true, '上传按钮已删除');
-
+    
+    // 其他代码保持不变
     // 移除 Shorts "+" 按钮
-    const removeShortsPlusButton = () => removeElement('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
     observeAndRemove('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
 
     // 拦截广告请求
