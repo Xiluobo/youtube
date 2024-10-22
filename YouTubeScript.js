@@ -40,12 +40,19 @@
         });
     };
 
-    // 移除底部上传按钮
-    const removeUploadButton = () => removeElement('ytd-upload-button-renderer', () => true, '上传按钮已删除');
-    observeAndRemove('ytd-upload-button-renderer', () => true, '上传按钮已删除');
-    
-    // 其他代码保持不变
+    // 尝试通过不同的选择器来移除上传按钮
+    const selectors = [
+        'ytd-upload-button-renderer', // 常用选择器
+        '#upload-button', // 尝试通过ID选择器
+        'button[aria-label="上传"]' // 尝试通过aria标签选择器
+    ];
+
+    selectors.forEach(selector => {
+        observeAndRemove(selector, () => true, `上传按钮已删除，使用选择器: ${selector}`);
+    });
+
     // 移除 Shorts "+" 按钮
+    const removeShortsPlusButton = () => removeElement('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
     observeAndRemove('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
 
     // 拦截广告请求
