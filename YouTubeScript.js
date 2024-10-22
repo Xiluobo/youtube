@@ -30,7 +30,7 @@
             } catch (error) {
                 console.error('Error removing element:', error);
             }
-        }, 2000);
+        }, 1000); // 每 1 秒检查一次
 
         window.addEventListener('unload', () => {
             observer.disconnect();
@@ -39,8 +39,11 @@
     };
 
     // 移除底部上传按钮
+    const removeUploadButton = () => removeElement('ytd-upload-button-renderer', () => true, '上传按钮已删除');
     observeAndRemove('ytd-upload-button-renderer', () => true, '上传按钮已删除');
+
     // 移除 Shorts "+" 按钮
+    const removeShortsPlusButton = () => removeElement('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
     observeAndRemove('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
 
     // 拦截广告请求
@@ -57,7 +60,7 @@
     const originalSend = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.send = function() {
         this.addEventListener('readystatechange', function() {
-            if (this.readyState === 4 && this.responseURL includes('youtubei.googleapis.com')) {
+            if (this.readyState === 4 && this.responseURL.includes('youtubei.googleapis.com')) {
                 console.log('YouTube 响应被拦截和修改');
                 const response = JSON.parse(this.responseText);
                 // 修改响应，移除广告
