@@ -1,6 +1,6 @@
-(function() {
+(function(config) {
     const log = (message) => {
-        console.group('YouTube Customization');
+        console.group('YouTube 自定义');
         console.log(message);
         console.groupEnd();
     };
@@ -20,7 +20,7 @@
             try {
                 removeElement(selector, conditionFn, logMessage);
             } catch (error) {
-                console.error('Error removing element:', error);
+                console.error('移除元素时出错:', error);
             }
         });
 
@@ -30,9 +30,9 @@
             try {
                 removeElement(selector, conditionFn, logMessage);
             } catch (error) {
-                console.error('Error removing element:', error);
+                console.error('移除元素时出错:', error);
             }
-        }, 1000); // 每 1 秒检查一次
+        }, 1000);
 
         window.addEventListener('unload', () => {
             observer.disconnect();
@@ -40,20 +40,23 @@
         });
     };
 
-    // 尝试通过不同的选择器来移除上传按钮
-    const selectors = [
-        'ytd-upload-button-renderer', // 常用选择器
-        '#upload-button', // 尝试通过ID选择器
-        'button[aria-label="上传"]' // 尝试通过aria标签选择器
-    ];
+    if (config.blockUpload) {
+        // 移除底部上传按钮
+        const selectors = [
+            'ytd-upload-button-renderer', 
+            '#upload-button', 
+            'button[aria-label="上传"]'
+        ];
 
-    selectors.forEach(selector => {
-        observeAndRemove(selector, () => true, `上传按钮已删除，使用选择器: ${selector}`);
-    });
+        selectors.forEach(selector => {
+            observeAndRemove(selector, () => true, `上传按钮已删除，使用选择器: ${selector}`);
+        });
+    }
 
-    // 移除 Shorts "+" 按钮
-    const removeShortsPlusButton = () => removeElement('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
-    observeAndRemove('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
+    if (config.blockImmersive) {
+        // 移除 Shorts "+" 按钮
+        observeAndRemove('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
+    }
 
     // 拦截广告请求
     const originalOpen = XMLHttpRequest.prototype.open;
@@ -79,4 +82,14 @@
         });
         originalSend.apply(this, arguments);
     };
-})();
+
+    if (config.debug) {
+        log('调试模式已启用');
+    }
+})({
+    lyricLang: 'zh', // 将翻译语言设置为中文
+    captionLang: 'zh', // 设置字幕语言为中文
+    blockUpload: true, // 启用屏蔽上传按钮
+    blockImmersive: true, // 启用屏蔽 Shorts "+" 按钮
+    debug: true // 启用调试模式
+});
