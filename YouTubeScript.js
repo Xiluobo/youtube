@@ -1,68 +1,54 @@
-(function(config) {
+(function() {
     const log = (message) => {
         console.group('YouTube 自定义');
         console.log(message);
         console.groupEnd();
     };
 
-    const removeElement = (selector, conditionFn = () => true, logMessage = '') => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(element => {
-            if (conditionFn(element)) {
-                element.remove();
-                log(logMessage);
-            }
-        });
+    // PIP 和后台播放
+    const enablePIP = () => {
+        const video = document.querySelector('video');
+        if (video) {
+            video.addEventListener('play', () => {
+                if (document.pictureInPictureEnabled && !document.pictureInPictureElement) {
+                    video.requestPictureInPicture().catch(error => log('PIP 请求失败: ' + error));
+                }
+            });
+            // 自动后台播放
+            video.addEventListener('pause', () => {
+                setTimeout(() => video.play(), 100); // 使得视频可以在后台继续播放
+            });
+        }
     };
+    enablePIP();
 
-    const observeAndRemove = (selector, conditionFn, logMessage) => {
-        const observer = new MutationObserver(() => {
-            try {
-                removeElement(selector, conditionFn, logMessage);
-            } catch (error) {
-                console.error('移除元素时出错:', error);
-            }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        const intervalId = setInterval(() => {
-            try {
-                removeElement(selector, conditionFn, logMessage);
-            } catch (error) {
-                console.error('移除元素时出错:', error);
-            }
-        }, 1000);
-
-        window.addEventListener('unload', () => {
-            observer.disconnect();
-            clearInterval(intervalId);
-        });
+    // 移除底部上传按钮
+    const removeUploadButton = () => {
+        const uploadButton = document.querySelector('ytd-upload-button-renderer');
+        if (uploadButton) {
+            uploadButton.remove();
+            log('上传按钮已删除');
+        }
     };
+    const observer = new MutationObserver(() => removeUploadButton());
+    observer.observe(document.body, { childList: true, subtree: true });
 
-    if (config.blockUpload) {
-        // 移除底部上传按钮
-        const selectors = [
-            'ytd-upload-button-renderer', 
-            '#upload-button', 
-            'button[aria-label="上传"]'
-        ];
-
-        selectors.forEach(selector => {
-            observeAndRemove(selector, () => true, `上传按钮已删除，使用选择器: ${selector}`);
-        });
-    }
-
-    if (config.blockImmersive) {
-        // 移除 Shorts "+" 按钮
-        observeAndRemove('ytd-button-renderer', (btn) => btn.innerText.includes('+'), 'Shorts "+" 按钮已删除');
-    }
+    // 移除 Shorts "+" 按钮
+    const removeShortsPlusButton = () => {
+        const shortsPlusButton = document.querySelector('ytd-button-renderer');
+        if (shortsPlusButton && shortsPlusButton.innerText.includes('+')) {
+            shortsPlusButton.remove();
+            log('Shorts "+" 按钮已删除');
+        }
+    };
+    const shortsObserver = new MutationObserver(() => removeShortsPlusButton());
+    shortsObserver.observe(document.body, { childList: true, subtree: true });
 
     // 拦截广告请求
     const originalOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function() {
         if (arguments[1] && arguments[1].includes('ad')) {
-            console.log('广告请求被拦截: ', arguments[1]);
+            log('广告请求被拦截: ' + arguments[1]);
             return;
         }
         originalOpen.apply(this, arguments);
@@ -73,23 +59,34 @@
     XMLHttpRequest.prototype.send = function() {
         this.addEventListener('readystatechange', function() {
             if (this.readyState === 4 && this.responseURL.includes('youtubei.googleapis.com')) {
-                console.log('YouTube 响应被拦截和修改');
+                log('YouTube 响应被拦截和修改');
                 const response = JSON.parse(this.responseText);
-                // 修改响应，移除广告
-                delete response.adPlacements;
+                delete response.adPlacements;  // 删除广告插入点
                 Object.defineProperty(this, 'responseText', { value: JSON.stringify(response) });
             }
         });
         originalSend.apply(this, arguments);
     };
 
-    if (config.debug) {
-        log('调试模式已启用');
-    }
-})({
-    lyricLang: 'zh', // 将翻译语言设置为中文
-    captionLang: 'zh', // 设置字幕语言为中文
-    blockUpload: true, // 启用屏蔽上传按钮
-    blockImmersive: true, // 启用屏蔽 Shorts "+" 按钮
-    debug: true // 启用调试模式
-});
+    // 自动翻译中文字幕
+    const autoTranslateSubtitles = () => {
+        const subtitleButton = document.querySelector('.ytp-subtitles-button');
+        if (subtitleButton) {
+            subtitleButton.click();
+            const autoTranslateOption = document.querySelector('.ytp-menuitem[aria-label="Auto-translate"]');
+            if (autoTranslateOption) {
+                autoTranslateOption.click();
+                const chineseOption = Array.from(document.querySelectorAll('.ytp-menuitem'))
+                    .find(item => item.innerText.includes('Chinese (Simplified)') || item.innerText.includes('简体中文'));
+                if (chineseOption) {
+                    chineseOption.click();
+                    log('自动翻译为简体中文已启用');
+                }
+            }
+        }
+    };
+    // 自动翻译字幕检查，每 2 秒检查一次
+    const subtitleObserver = new MutationObserver(autoTranslateSubtitles);
+    subtitleObserver.observe(document.body, { childList: true, subtree: true });
+    setInterval(autoTranslateSubtitles, 2000);  // 双保险，每 2 秒检查一次字幕状态
+})();
